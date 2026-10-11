@@ -7,6 +7,58 @@ The format is based on [Keep a Changelog], and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- **The `node-runtime` pack catches Compose's list-form environment** ([#242],
+  fixed by [@kragent66-glitch](https://github.com/kragent66-glitch) in
+  [#249]). `- NODE_OPTIONS=--inspect=...` and `- NODE_TLS_REJECT_UNAUTHORIZED=0`
+  produced no findings, while the same variables in map form did, including
+  the error-level TLS one. Each rule now matches both forms.
+
+[#242]: https://github.com/myselfsiddharth/Flecto/issues/242
+[#249]: https://github.com/myselfsiddharth/Flecto/pull/249
+
+## [4.4.2] - 2026-10-11
+
+### Fixed
+
+- **Removing or renaming a container or resource no longer reads as weakening
+  it** ([#253]). The `kubernetes` pack expanded a removed sidecar, a renamed
+  Deployment, or last release's ClusterServiceVersion into leaf removals, so
+  `k8s-allow-privilege-escalation`, `k8s-run-as-non-root-weakened` and
+  `k8s-resource-limits-removed` fired on settings that went away with their
+  owner. That was 4 of the 5 strongest-looking findings across 116 real
+  repositories. A removed list element or whole document is no longer expanded;
+  a removed block inside something that remains (a container's
+  `securityContext`) still is, and still fires.
+
+[#253]: https://github.com/myselfsiddharth/Flecto/issues/253
+
+## [4.4.1] - 2026-10-11
+
+### Fixed
+
+- **A secret word anywhere above a value no longer makes it a "secret"**
+  ([#248]). Key-name matching tested the whole path, inside longer words too,
+  so it masked and flagged `capabilities.drop[0]` under `redisSecretInit`,
+  `matchLabels.app` under `apiKey`, `tokenizer.flavor`, `server-tokens:
+  "false"`, and the `type`/`description` of every CRD schema property named
+  `clientSecret`. Measured over every YAML leaf in 24 real repositories, 1,102
+  leaves were flagged; now 222, and none that were not flagged before.
+
+  A key now names a credential when the word is whole (after camelCase and
+  punctuation splitting, or ending a compound like `DBPASSWORD`) and its last
+  word is not metadata (`secretName`, `createSecretJob`, `tokenTTL`). A leaf
+  is a secret when its own key names one, or an ancestor does with no
+  structure or metadata key in between (`secrets.prod.db` yes;
+  `apiKey.selector.matchLabels.app` no), or it sits in a credential's
+  `data`/`stringData` under any name. `key` and `id` stay credential words
+  (`apiKey`, Vault `secret_id`). Display masking, the snapshot store, and
+  `secret-key-changed` all use this rule; the value detector still runs on
+  every value regardless.
+
+[#248]: https://github.com/myselfsiddharth/Flecto/issues/248
+
 ## [4.4.0] - 2026-10-05
 
 ### Changed
@@ -1451,7 +1503,9 @@ fixed — those runs were never actually gated — but the failure is new.
 - Misconfigured policy packs/plugins cause `watch` to exit non-zero instead of
   continuing with no policies.
 
-[Unreleased]: https://github.com/myselfsiddharth/Flecto/compare/v4.4.0...HEAD
+[Unreleased]: https://github.com/myselfsiddharth/Flecto/compare/v4.4.2...HEAD
+[4.4.2]: https://github.com/myselfsiddharth/Flecto/compare/v4.4.1...v4.4.2
+[4.4.1]: https://github.com/myselfsiddharth/Flecto/compare/v4.4.0...v4.4.1
 [4.4.0]: https://github.com/myselfsiddharth/Flecto/compare/v4.3.0...v4.4.0
 [4.3.0]: https://github.com/myselfsiddharth/Flecto/compare/v4.2.0...v4.3.0
 [4.2.0]: https://github.com/myselfsiddharth/Flecto/compare/v4.1.1...v4.2.0
